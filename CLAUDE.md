@@ -10,10 +10,10 @@
 # Install dependencies
 uv sync
 
-# Export YOLO
+# Export YOLO (default: yolo26s, 640x640, FP16)
 uv run python scripts/export_yolo.py
 
-# Export Depth Anything V2
+# Export Depth Anything V2 (default: vits, 518x518, FP16)
 uv run python scripts/export_depth.py
 
 # Copy to rayban-nav
@@ -24,14 +24,29 @@ cp -r exports/*.mlpackage ~/Developer/extreme/rayban-nav/RayBanNav/Resources/MLM
 ```
 coreml-forge/
 ├── scripts/
-│   ├── export_yolo.py        # YOLO → CoreML
-│   └── export_depth.py       # Depth Anything V2 → CoreML
+│   ├── export_yolo.py        # YOLO → CoreML (default: yolo26s)
+│   └── export_depth.py       # Depth Anything V2 → CoreML (default: vits)
 ├── exports/                   # Output .mlpackage (gitignored)
 ├── docs/
-│   └── DOCUMENTATION_GUIDE.md
+│   ├── project/
+│   │   ├── DOCUMENTATION_GUIDE.md
+│   │   ├── CHANGELOG.md
+│   │   ├── IMPLEMENTATION_PLAN.md
+│   │   └── WORKFLOW.md
+│   └── learning/
+│       ├── README.md
+│       ├── yolo_coreml_export.md
+│       └── depth_anything_export.md
 ├── pyproject.toml             # uv project config + dependencies
 └── CLAUDE.md                  # ← You are here
 ```
+
+## Models
+
+| Model | Script | Default Config | Size |
+|-------|--------|---------------|------|
+| YOLO26s | `export_yolo.py` | 640x640 FP16, end-to-end (NMS-free) | ~18 MB |
+| Depth Anything V2 vits | `export_depth.py` | 518x518 FP16, iOS 18 | ~47 MB |
 
 ## Rules
 - Use `uv` for everything (not pip, not conda)
@@ -39,3 +54,5 @@ coreml-forge/
 - Scripts should be standalone with `--help` and sensible defaults
 - Default to FP16 precision and iOS 18 deployment target
 - Print model info (size, input shape, precision) after export
+- Commits: `type(scope): description` — no Co-Authored-By trailers
+- See `docs/project/WORKFLOW.md` for full conventions
