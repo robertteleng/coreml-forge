@@ -8,24 +8,22 @@ Guia tecnica sobre exportar modelos YOLO a CoreML para iOS.
 
 | Modelo | Params | GFLOPs | Output Shape | NMS | Notas |
 |--------|--------|--------|-------------|-----|-------|
-| **YOLO26s** (default) | 10.0M | 22.8 | (1, 300, 6) | End-to-end | Mas reciente, NMS-free, optimizado para edge |
+| **YOLO26s** (default) | 10.0M | 22.8 | (1, 300, 6) | End-to-end | NMS-free, optimizado para edge |
 | YOLO26n | ~3M | ~7 | (1, 300, 6) | End-to-end | Nano, mas rapido, menos preciso |
-| YOLO11s | 9.4M | 21.5 | (1, 84, 8400) | Incluido via flag | Legacy, requiere `nms=True` |
-| YOLOv8s | ~11M | ~28 | (1, 84, 8400) | Incluido via flag | Legacy |
 
 ---
 
-## YOLO26 vs YOLO11
+## YOLO26
 
-YOLO26 (septiembre 2025) es un cambio significativo:
+YOLO26 (septiembre 2025) elimina DFL, incluye NMS end-to-end, y es 43% mas rapido en CPU.
 
-| Aspecto | YOLO26 | YOLO11 |
-|---------|--------|--------|
-| NMS | End-to-end (built-in) | Requiere `nms=True` en export |
-| DFL | Eliminado | Incluido |
-| Output | `(1, 300, 6)` — 300 detecciones, 6 valores cada una | `(1, 84, 8400)` — raw predictions |
-| CPU inference | 43% mas rapido | Baseline |
-| Edge optimization | Diseniado para edge | General purpose |
+| Aspecto | YOLO26 |
+|---------|--------|
+| NMS | End-to-end (built-in, NMS-free) |
+| DFL | Eliminado |
+| Output | `(1, 300, 6)` — 300 detecciones max, 6 valores cada una |
+| CPU inference | 43% mas rapido que generaciones anteriores |
+| Edge optimization | Diseniado para edge y low-power devices |
 
 **Para rayban-nav usamos YOLO26s** — es el default y el recomendado.
 
@@ -39,7 +37,7 @@ uv run python scripts/export_yolo.py
 
 # Opciones
 uv run python scripts/export_yolo.py --model yolo26n    # Nano (mas rapido)
-uv run python scripts/export_yolo.py --model yolo11s     # Legacy
+uv run python scripts/export_yolo.py --model yolo26n    # Nano (faster)
 uv run python scripts/export_yolo.py --imgsz 320         # Input mas pequenio
 uv run python scripts/export_yolo.py --no-half           # FP32
 ```

@@ -36,9 +36,8 @@ Registro cronologico de desarrollo, decisiones tecnicas, y cambios significativo
 - Ambos modelos copiados a `~/Developer/extreme/rayban-nav/RayBanNav/Resources/MLModels/`
 
 ### Decisiones tecnicas
-- **YOLO26s sobre YOLO11s**: YOLO26 (sept 2025) es la version mas reciente de Ultralytics. Es end-to-end (NMS-free natively), 43% mas rapido en CPU, y optimizado para edge. Output shape `(1, 300, 6)` vs YOLO11 `(1, 84, 8400)`.
+- **YOLO26s**: YOLO26 (sept 2025) es la version mas reciente de Ultralytics. End-to-end (NMS-free), 43% mas rapido en CPU, optimizado para edge. Output shape `(1, 300, 6)`.
 - **FP16 por defecto**: Mitad de tamanio, performance similar en Apple Neural Engine. Ambos scripts aceptan `--no-half` para FP32 si se necesita debugging.
 - **iOS 18 deployment target**: Para Depth Anything V2, `ct.target.iOS18` permite optimizaciones del compilador CoreML mas recientes.
 - **Depth Anything V2 vits (Small)**: 24.8M params, balance entre velocidad y precision. vitb y vitl disponibles via `--variant` pero vits es suficiente para el pipeline de rayban-nav (~15-25 FPS).
 - **Scripts standalone**: Cada script es autosuficiente — descarga pesos, clona repos, y exporta. No requieren setup previo mas alla de `uv sync`.
-- **YOLO26 NMS warning**: `nms=True` no aplica para modelos end-to-end (YOLO26). Ultralytics fuerza `nms=False` automaticamente. El script pasa `nms=not args.no_nms` pero YOLO26 lo ignora — esto es intencional para mantener compatibilidad con modelos legacy (yolo11, yolov8).

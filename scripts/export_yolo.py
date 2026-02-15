@@ -2,7 +2,7 @@
 
 Usage:
     uv run python scripts/export_yolo.py                    # Default: yolo26s, 640x640, FP16
-    uv run python scripts/export_yolo.py --model yolo11s    # Different model
+    uv run python scripts/export_yolo.py --model yolo26n    # Nano (faster, less accurate)
     uv run python scripts/export_yolo.py --imgsz 320        # Smaller input (faster, less accurate)
     uv run python scripts/export_yolo.py --no-nms           # Without NMS (handle in Swift)
     uv run python scripts/export_yolo.py --no-half          # FP32 instead of FP16
@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "--model",
         default="yolo26s",
-        help="YOLO model name (e.g., yolo26s, yolo26n, yolo11s, yolov8s). Default: yolo26s",
+        help="YOLO model name (e.g., yolo26s, yolo26n). Default: yolo26s",
     )
     parser.add_argument(
         "--imgsz",

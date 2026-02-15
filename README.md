@@ -17,7 +17,6 @@ uv sync
 ```bash
 uv run python scripts/export_yolo.py                    # yolo26s, 640x640, FP16
 uv run python scripts/export_yolo.py --model yolo26n    # Nano (faster)
-uv run python scripts/export_yolo.py --model yolo11s    # Legacy model
 uv run python scripts/export_yolo.py --imgsz 320        # Faster inference
 ```
 
