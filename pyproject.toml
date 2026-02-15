@@ -1,0 +1,20 @@
+[project]
+name = "coreml-forge"
+version = "0.1.0"
+description = "Export ML models (YOLO, Depth Anything V2, etc.) to CoreML for iOS apps"
+requires-python = ">=3.10"
+dependencies = [
+    "ultralytics>=8.3",
+    "coremltools>=8.0",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "huggingface-hub>=0.20",
+    "rich>=13.0",
+]
+
+[project.scripts]
+forge-yolo = "scripts.export_yolo:main"
+forge-depth = "scripts.export_depth:main"
+
+[tool.uv]
+dev-dependencies = []

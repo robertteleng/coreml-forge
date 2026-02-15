@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# uv
+uv.lock
+
+# Exported models (large binaries)
+exports/*.mlpackage
+exports/*.mlmodel
+exports/*.mlmodelc
+
+# PyTorch weights (downloaded during export)
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Depth Anything V2 repo clone
+Depth-Anything-V2/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
