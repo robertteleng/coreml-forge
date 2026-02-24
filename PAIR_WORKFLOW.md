@@ -129,6 +129,8 @@ El pegamento entre servicios existentes. Dibuja:
 ```
 El "???" es lo que vas a escribir.
 
+> Después de completar cada feature, documenta el proceso en [DEVELOPER_DIARY.md](DEVELOPER_DIARY.md).
+
 ---
 
 ## Reglas de Claude
