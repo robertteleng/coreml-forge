@@ -16,14 +16,18 @@ exports/*.mlpackage
 exports/*.mlmodel
 exports/*.mlmodelc
 
+# Exception: FaceLandmarks is small (1.2 MB) and needed by flow-coach-ios
+!exports/FaceLandmarks.mlpackage
+
 # PyTorch weights (downloaded during export)
 *.pt
 *.pth
 *.onnx
 *.engine
 
-# Depth Anything V2 repo clone
+# Model repo clones (downloaded during export)
 Depth-Anything-V2/
+MediaPipePyTorch/
 
 # OS
 .DS_Store

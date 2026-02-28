@@ -125,8 +125,8 @@ Once exported, the iOS integration path:
 
 ## Success Criteria
 
-- [ ] PyTorch FaceMesh model loads and traces cleanly
-- [ ] CoreML export succeeds with FP16 and `CPU_AND_NE`
+- [x] PyTorch FaceMesh model loads and traces cleanly *(2026-02-28: zmurez/MediaPipePyTorch, TraceableFaceLandmark wrapper)*
+- [x] CoreML export succeeds with FP16 and `CPU_AND_NE` *(2026-02-28: 1.2 MB, 365 MIL ops)*
 - [ ] Output landmarks match MediaPipe 468-point indices (spot-check chin=152, nose tip, eye corners)
 - [ ] Model runs on ANE (verify with Instruments → CoreML trace)
 - [ ] FP16 inference < 15ms on iPhone 12+ (vs ~20ms current GPU)

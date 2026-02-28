@@ -15,6 +15,7 @@ dependencies = [
 [project.scripts]
 forge-yolo = "scripts.export_yolo:main"
 forge-depth = "scripts.export_depth:main"
+forge-face = "scripts.export_face_landmarks:main"
 
 [tool.uv]
 dev-dependencies = []
