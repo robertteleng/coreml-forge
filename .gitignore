@@ -12,8 +12,8 @@ build/
 uv.lock
 
 # Exported models — tracked by Git LFS (see .gitattributes)
-# Only ignore transient build artifacts, not the final exports
-exports/**/com.apple.CoreML/
+# CoreML compilation cache (generated on macOS, not needed in repo)
+exports/**/*.mlmodelc
 
 # Model repo clones + downloaded weights (auto-downloaded during export)
 .models/
