@@ -1,6 +1,6 @@
 """Export summarizer LLM to CoreML via ANEMLL for on-device iOS inference.
 
-Uses ANEMLL to convert Qwen3.5-4B (or other supported models) to CoreML
+Uses ANEMLL to convert Qwen3-4B (or other supported models) to CoreML
 optimized for Apple Neural Engine. ANEMLL handles chunking, quantization
 (LUT4/LUT6), and ANE-specific optimizations.
 
@@ -8,9 +8,9 @@ IMPORTANT: This script requires macOS with Apple Silicon (ANEMLL requirement).
            It will NOT work on Linux.
 
 Usage:
-    uv run python scripts/export_summarizer.py                              # Default: Qwen3.5-4B
-    uv run python scripts/export_summarizer.py --model Qwen/Qwen3-4B       # Alternative model
-    uv run python scripts/export_summarizer.py --context 1024               # Longer context
+    uv run python scripts/export_summarizer.py                              # Default: Qwen3.5-4B, ctx2048
+    uv run python scripts/export_summarizer.py --model Qwen/Qwen3-4B       # Qwen3 alternative
+    uv run python scripts/export_summarizer.py --context 4096               # Longer context
     uv run python scripts/export_summarizer.py --fp16                       # No quantization (larger)
 
 Output:
@@ -37,7 +37,7 @@ from rich.table import Table
 console = Console()
 
 DEFAULT_MODEL = "Qwen/Qwen3.5-4B"
-DEFAULT_CONTEXT = 512  # Sufficient for transcript summarization (input ~500 tokens)
+DEFAULT_CONTEXT = 2048  # Transcripts ~500-2000 tokens + JSON output ~200 tokens
 DEFAULT_BATCH = 64
 
 

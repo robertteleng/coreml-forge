@@ -84,12 +84,15 @@ exports/Whisper_{variant}/
 
 ### Fase 2: Summarizer (en progreso)
 
-**Modelo**: Qwen3.5-4B (via ANEMLL → CoreML/ANE)
+**Modelo**: Qwen3.5-4B (via ANEMLL → CoreML/ANE, contexto 2048)
 
-**Por qué Qwen3.5-4B**: Modelo más reciente (feb 2026), soportado por ANEMLL para ANE nativo, calidad que rivaliza con modelos mucho mayores. ANEMLL no soporta Phi-4-mini.
+**Por qué Qwen3.5-4B**: Modelo más reciente (feb 2026), familia Qwen soportada por ANEMLL para ANE nativo. Excelente en JSON estructurado, 119 idiomas (ES+EN fuerte). Phi-4-mini no soportado por ANEMLL. Contexto 2048 cubre transcripts de hasta ~1800 tokens + output JSON.
+
+**Nota**: Qwen3.5 es nuevo y puede que ANEMLL requiera ajustes. Fallback: Qwen3-4B (probado, pre-convertido disponible en ctx1024).
 
 **Conversión**: ANEMLL `convert_model.sh` (requiere macOS + Apple Silicon)
 - Quantización: LUT4 (FFN) + LUT6 (LM head) → ~2.5 GB
+- Contexto: 2048 tokens
 - Formato: CoreML chunked (meta.yaml + mlpackage chunks)
 
 **Entregables**:

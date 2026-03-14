@@ -60,7 +60,7 @@ coreml-forge/
 | Depth Anything V2 vits | `export_depth.py` | 518x518 FP16, iOS 18 | ~47 MB | rayban-nav |
 | Face Landmarks | `export_face_landmarks.py` | 192x192 FP16, CPU+ANE, 468 pts | ~1.2 MB | flow-coach-ios |
 | Whisper (encoder) | `export_whisper.py` | 80×3000 mel FP16, iOS 18 | ~230 MB (small) | brevox-ios |
-| Qwen3.5-4B (summarizer) | `export_summarizer.py` | LUT4+LUT6, ANEMLL, macOS only | ~2.5 GB | brevox-ios |
+| Qwen3.5-4B (summarizer) | `export_summarizer.py` | ctx2048, LUT4+LUT6, ANEMLL, macOS only | ~2.5 GB | brevox-ios |
 
 ## Rules
 - Use `uv` for everything (not pip, not conda)
