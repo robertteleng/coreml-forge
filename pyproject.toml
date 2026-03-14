@@ -1,7 +1,7 @@
 [project]
 name = "coreml-forge"
 version = "0.1.0"
-description = "Export ML models (YOLO, Depth Anything V2, etc.) to CoreML for iOS apps"
+description = "Export ML models (YOLO, Depth Anything V2, Whisper, etc.) to CoreML for iOS apps"
 requires-python = ">=3.10"
 dependencies = [
     "ultralytics>=8.3",
@@ -10,12 +10,16 @@ dependencies = [
     "torchvision>=0.15",
     "huggingface-hub>=0.20",
     "rich>=13.0",
+    "openai-whisper>=20240930",
+    "tiktoken>=0.5",
+    "safetensors>=0.4",
 ]
 
 [project.scripts]
 forge-yolo = "scripts.export_yolo:main"
 forge-depth = "scripts.export_depth:main"
 forge-face = "scripts.export_face_landmarks:main"
+forge-whisper = "scripts.export_whisper:main"
 
 [tool.uv]
 dev-dependencies = []

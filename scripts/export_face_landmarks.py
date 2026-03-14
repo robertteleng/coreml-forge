@@ -23,7 +23,7 @@ from rich.table import Table
 console = Console()
 
 REPO_URL = "https://github.com/zmurez/MediaPipePyTorch.git"
-REPO_DIR = Path("MediaPipePyTorch")
+REPO_DIR = Path(".models/MediaPipePyTorch")
 WEIGHTS_FILE = "blazeface_landmark.pth"
 INPUT_SIZE = 192
 NUM_LANDMARKS = 468
@@ -31,12 +31,13 @@ NUM_LANDMARKS = 468
 
 def ensure_repo() -> Path:
     """Clone MediaPipePyTorch repo if not present."""
+    REPO_DIR.parent.mkdir(exist_ok=True)
     if not REPO_DIR.exists():
         console.print("[bold]Cloning MediaPipePyTorch repository...[/bold]")
         import subprocess
 
         subprocess.run(
-            ["git", "clone", "--depth=1", REPO_URL],
+            ["git", "clone", "--depth=1", REPO_URL, str(REPO_DIR)],
             check=True,
         )
     return REPO_DIR

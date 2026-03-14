@@ -2,7 +2,10 @@
 
 ## Project Identity
 - **Tool**: coreml-forge — Export ML models to CoreML for iOS
-- **Primary consumers**: [rayban-nav](https://github.com/robertteleng/rayban-nav) (YOLO + Depth Anything V2), [flow-coach-ios](../flow-coach-ios) (Face Landmarks)
+- **Consumers**:
+  - [rayban-nav](https://github.com/robertteleng/rayban-nav) — YOLO + Depth Anything V2 (visión)
+  - [flow-coach-ios](../flow-coach-ios) — Face Landmarks (face/body)
+  - [brevox-ios](../../apps/brevox-ios) — Whisper + Summarizer (audio/lenguaje)
 - **Runtime**: Python 3.10+, managed with `uv`
 
 ## Quick Commands
@@ -19,43 +22,48 @@ uv run python scripts/export_depth.py
 # Export Face Landmarks (468-point, 192x192, FP16, ANE)
 uv run python scripts/export_face_landmarks.py
 
-# Copy to rayban-nav
-cp -r exports/*.mlpackage ~/Developer/extreme/rayban-nav/RayBanNav/Resources/MLModels/
+# Export Whisper (default: small, FP16, encoder-only CoreML + decoder weights)
+uv run python scripts/export_whisper.py
 ```
 
 ## Structure
 ```
 coreml-forge/
 ├── scripts/
-│   ├── export_yolo.py        # YOLO → CoreML (default: yolo26s)
-│   ├── export_depth.py       # Depth Anything V2 → CoreML (default: vits)
-│   └── export_face_landmarks.py  # Face Landmarks → CoreML (468-point, ANE)
-├── exports/                   # Output .mlpackage (gitignored)
+│   ├── export_yolo.py             # YOLO → CoreML (default: yolo26s)
+│   ├── export_depth.py            # Depth Anything V2 → CoreML (default: vits)
+│   ├── export_face_landmarks.py   # Face Landmarks → CoreML (468-point, ANE)
+│   └── export_whisper.py          # Whisper → CoreML encoder + decoder weights
+├── exports/                        # Output models (gitignored)
+├── .models/                        # Auto-cloned repos + downloaded weights (gitignored)
 ├── docs/
 │   ├── project/
-│   │   ├── DOCUMENTATION_GUIDE.md
+│   │   ├── IMPLEMENTATION_PLAN.md  # Plan por consumer (rayban-nav, flow-coach, brevox)
+│   │   ├── PAIR_WORKFLOW.md
+│   │   ├── DEVELOPER_DIARY.md
 │   │   ├── CHANGELOG.md
-│   │   ├── IMPLEMENTATION_PLAN.md
 │   │   └── WORKFLOW.md
 │   └── learning/
-│       ├── README.md
 │       ├── yolo_coreml_export.md
-│       └── depth_anything_export.md
-├── pyproject.toml             # uv project config + dependencies
-└── CLAUDE.md                  # ← You are here
+│       ├── depth_anything_export.md
+│       └── whisper_coreml_export.md
+├── pyproject.toml                  # uv project config + dependencies
+└── CLAUDE.md                       # ← You are here
 ```
 
 ## Models
 
-| Model | Script | Default Config | Size |
-|-------|--------|---------------|------|
-| YOLO26s | `export_yolo.py` | 640x640 FP16, end-to-end (NMS-free) | ~18 MB |
-| Depth Anything V2 vits | `export_depth.py` | 518x518 FP16, iOS 18 | ~47 MB |
-| Face Landmarks | `export_face_landmarks.py` | 192x192 FP16, CPU+ANE, 468 points | ~1.2 MB |
+| Model | Script | Default Config | Size | Consumer |
+|-------|--------|---------------|------|----------|
+| YOLO26s | `export_yolo.py` | 640x640 FP16, NMS-free | ~18 MB | rayban-nav |
+| Depth Anything V2 vits | `export_depth.py` | 518x518 FP16, iOS 18 | ~47 MB | rayban-nav |
+| Face Landmarks | `export_face_landmarks.py` | 192x192 FP16, CPU+ANE, 468 pts | ~1.2 MB | flow-coach-ios |
+| Whisper (encoder) | `export_whisper.py` | 80×3000 mel FP16, iOS 18 | ~230 MB (small) | brevox-ios |
 
 ## Rules
 - Use `uv` for everything (not pip, not conda)
 - Exports go to `exports/` (gitignored — models are large binaries)
+- Model repo clones go to `.models/` (gitignored)
 - Scripts should be standalone with `--help` and sensible defaults
 - Default to FP16 precision and iOS 18 deployment target
 - Print model info (size, input shape, precision) after export

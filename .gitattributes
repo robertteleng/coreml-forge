@@ -1,0 +1,4 @@
+exports/**/*.mlmodelc filter=lfs diff=lfs merge=lfs -text
+exports/**/*.mlpackage/** filter=lfs diff=lfs merge=lfs -text
+exports/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+exports/**/*.mlmodel filter=lfs diff=lfs merge=lfs -text

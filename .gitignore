@@ -11,23 +11,12 @@ build/
 # uv
 uv.lock
 
-# Exported models (large binaries)
-exports/*.mlpackage
-exports/*.mlmodel
-exports/*.mlmodelc
+# Exported models — tracked by Git LFS (see .gitattributes)
+# Only ignore transient build artifacts, not the final exports
+exports/**/com.apple.CoreML/
 
-# Exception: FaceLandmarks is small (1.2 MB) and needed by flow-coach-ios
-!exports/FaceLandmarks.mlpackage
-
-# PyTorch weights (downloaded during export)
-*.pt
-*.pth
-*.onnx
-*.engine
-
-# Model repo clones (downloaded during export)
-Depth-Anything-V2/
-MediaPipePyTorch/
+# Model repo clones + downloaded weights (auto-downloaded during export)
+.models/
 
 # OS
 .DS_Store

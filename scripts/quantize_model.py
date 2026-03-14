@@ -89,10 +89,8 @@ def quantize_w8a8(
     import coremltools as ct
     from coremltools.optimize.coreml import (
         OptimizationConfig,
-        OpActivationLinearQuantizerConfig,
         OpLinearQuantizerConfig,
         linear_quantize_weights,
-        experimental,
     )
     import numpy as np
     from PIL import Image
@@ -165,11 +163,6 @@ def quantize_w8a8(
         granularity="per_channel",  # per_channel for better accuracy
     )
 
-    # Then quantize activations
-    activation_config = OpActivationLinearQuantizerConfig(
-        mode="linear_symmetric",
-    )
-
     config = OptimizationConfig(
         global_config=weight_config,
     )
@@ -181,15 +174,25 @@ def quantize_w8a8(
     # Step 2: Quantize activations using calibration data
     console.print("  Step 2/2: Quantizing activations with calibration...")
     try:
-        # Use experimental activation quantization API
+        from coremltools.optimize.coreml import (
+            OpActivationLinearQuantizerConfig,
+            experimental,
+        )
+
+        activation_config = OpActivationLinearQuantizerConfig(
+            mode="linear_symmetric",
+        )
         quantized_model = experimental.linear_quantize_activations(
             quantized_model,
             make_calibration_data(),
             activation_config,
         )
+    except (ImportError, AttributeError) as e:
+        console.print(f"  [yellow]Activation quantization not available in this coremltools version: {e}[/yellow]")
+        console.print("  [yellow]Falling back to weight-only INT8 quantization[/yellow]")
     except Exception as e:
         console.print(f"  [yellow]Activation quantization failed: {e}[/yellow]")
-        console.print("  [yellow]Falling back to weight-only quantization[/yellow]")
+        console.print("  [yellow]Falling back to weight-only INT8 quantization[/yellow]")
 
     console.print(f"[bold]Saving to {output_path}...[/bold]")
     if output_path.exists():

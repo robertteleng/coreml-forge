@@ -47,13 +47,17 @@ VARIANTS = {
 
 def ensure_depth_anything_repo() -> Path:
     """Clone Depth Anything V2 repo if not present."""
-    repo_dir = Path("Depth-Anything-V2")
+    models_dir = Path(".models")
+    models_dir.mkdir(exist_ok=True)
+    repo_dir = models_dir / "Depth-Anything-V2"
     if not repo_dir.exists():
         console.print("[bold]Cloning Depth Anything V2 repository...[/bold]")
         import subprocess
 
         subprocess.run(
-            ["git", "clone", "--depth=1", "https://github.com/DepthAnything/Depth-Anything-V2.git"],
+            ["git", "clone", "--depth=1",
+             "https://github.com/DepthAnything/Depth-Anything-V2.git",
+             str(repo_dir)],
             check=True,
         )
     return repo_dir
@@ -61,7 +65,7 @@ def ensure_depth_anything_repo() -> Path:
 
 def download_weights(variant: dict) -> Path:
     """Download model weights from HuggingFace."""
-    weights_path = Path(variant["weights_file"])
+    weights_path = Path(".models") / variant["weights_file"]
     if not weights_path.exists():
         console.print(f"[bold]Downloading weights from {variant['hf_id']}...[/bold]")
         from huggingface_hub import hf_hub_download
@@ -69,7 +73,7 @@ def download_weights(variant: dict) -> Path:
         hf_hub_download(
             repo_id=variant["hf_id"],
             filename=variant["weights_file"],
-            local_dir=".",
+            local_dir=".models",
         )
     return weights_path
 
