@@ -20,6 +20,7 @@ forge-yolo = "scripts.export_yolo:main"
 forge-depth = "scripts.export_depth:main"
 forge-face = "scripts.export_face_landmarks:main"
 forge-whisper = "scripts.export_whisper:main"
+forge-summarizer = "scripts.export_summarizer:main"
 
 [build-system]
 requires = ["hatchling"]

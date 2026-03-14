@@ -78,23 +78,33 @@ exports/Whisper_{variant}/
 **Progreso**:
 - [x] Script `export_whisper.py` con encoder CoreML + decoder weights + tokenizer + config
 - [x] Testeado con whisper-tiny (15.7 MB encoder, 56.4 MB decoder weights)
-- [ ] Exportar whisper-small (variante de producción)
+- [x] Exportar whisper-small (variante de producción, 168 MB encoder + 293 MB decoder)
 - [ ] Verificar encoder output en Xcode
 - [ ] Implementar decoder en Swift (brevox-ios)
 
-### Fase 2: Summarizer (pendiente)
+### Fase 2: Summarizer (en progreso)
 
-**Modelo**: Phi-4-mini-instruct (3.8B params, ~2.2 GB INT4)
+**Modelo**: Qwen3.5-4B (via ANEMLL → CoreML/ANE)
 
-**Por qué Phi-4-mini**: Mejor calidad de JSON estructurado entre modelos <4B. Con 12GB RAM, cabe holgado (2.2 GB + Whisper ~460 MB = ~2.7 GB total, ~5 GB headroom).
+**Por qué Qwen3.5-4B**: Modelo más reciente (feb 2026), soportado por ANEMLL para ANE nativo, calidad que rivaliza con modelos mucho mayores. ANEMLL no soporta Phi-4-mini.
+
+**Conversión**: ANEMLL `convert_model.sh` (requiere macOS + Apple Silicon)
+- Quantización: LUT4 (FFN) + LUT6 (LM head) → ~2.5 GB
+- Formato: CoreML chunked (meta.yaml + mlpackage chunks)
 
 **Entregables**:
-- `scripts/export_summarizer.py`
-- `exports/Phi4Mini.mlpackage` (INT4 quantized)
+```
+exports/Summarizer_Qwen3.5_4B/
+├── meta.yaml               # ANEMLL config
+├── embeddings/             # CoreML
+├── lm_head/                # CoreML
+└── ffn_*/                  # CoreML chunks
+```
 
 **Progreso**:
-- [ ] Script `export_summarizer.py`
-- [ ] INT4 quantization con `coremltools.optimize`
+- [x] Script `export_summarizer.py` (wrapper ANEMLL, macOS only)
+- [ ] Ejecutar conversión en Mac
+- [ ] Test con ANEMLL chat.py
 - [ ] Verificar JSON output (summary, highlights, actionItems)
 
 ### Integración en Brevox
@@ -106,7 +116,7 @@ exports/Whisper_{variant}/
 4. Mapear tokens → `TranscriptSegment(start, end, text)`
 
 **Summarizer**:
-1. Phi4Mini via Background Assets (~2.2 GB, on-demand download)
+1. Qwen3.5-4B via Background Assets (~2.5 GB, on-demand download)
 2. `CoreMLSummarizationEngine: SummarizationEngine`
 3. Mantener `HeuristicSummarizationEngine` como fallback
 
