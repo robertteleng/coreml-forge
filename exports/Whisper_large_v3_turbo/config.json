@@ -1,0 +1,22 @@
+{
+  "variant": "large-v3-turbo",
+  "model_id": "openai/whisper-large-v3-turbo",
+  "n_mels": 128,
+  "n_audio_ctx": 1500,
+  "n_audio_state": 1280,
+  "n_audio_head": 20,
+  "n_audio_layer": 32,
+  "n_text_ctx": 448,
+  "n_text_state": 1280,
+  "n_text_head": 20,
+  "n_text_layer": 4,
+  "n_vocab": 51866,
+  "precision": "FP16",
+  "mel_params": {
+    "sample_rate": 16000,
+    "n_fft": 400,
+    "hop_length": 160,
+    "n_mels": 128,
+    "chunk_length_s": 30
+  }
+}
