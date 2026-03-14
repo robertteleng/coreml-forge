@@ -1,140 +1,195 @@
-# Next Session — MediaPipe Face Landmarker → CoreML (ANE)
+# Next Session — Whisper + Summarizer → CoreML for Brevox
 
-**Consumer**: [flow-coach-ios](../flow-coach-ios) — Dance coaching app with real-time pose + hand + face tracking
-**Priority**: Face Landmarker first (biggest ANE win), then Hand, then Pose
-**Goal**: Replace MediaPipe FaceLandmarker (GPU) with a PyTorch-native face mesh model exported to CoreML for Apple Neural Engine
+**Consumer**: [brevox-ios](../../apps/brevox-ios) — Voice recorder app with local transcription + summarization
+**Priority**: Whisper first (core feature), then summarizer
+**Goal**: Export Whisper tiny/base and a small language model to CoreML for on-device inference
 
 ---
 
 ## Context
 
-FlowCoach runs 3 MediaPipe models simultaneously via `MediaPipeTasksVision` SDK:
+Brevox is a local-first voice recording app (iOS 18+, iPhone 15 Pro minimum).
+Currently the transcription and summarization engines use fallback heuristics.
+We need real Core ML models to ship with the app.
 
-| Model | File | Landmarks | Current Delegate | FPS Impact |
-|-------|------|-----------|-----------------|------------|
-| **Pose Landmarker** | `pose_landmarker_full.task` | 33 body | GPU | Base (~25 FPS) |
-| **Hand Landmarker** | `hand_landmarker.task` | 21 × 2 hands | GPU | -3 FPS |
-| **Face Landmarker** | `face_landmarker.task` | 478 face | GPU | -5 FPS |
+| Model | Purpose | Current State | Target |
+|-------|---------|---------------|--------|
+| **Whisper** | Audio → transcript | `CoreMLWhisperTranscriber` with debug fallback | Real Core ML inference |
+| **Summarizer** | Transcript → summary/highlights/actions | `HeuristicSummarizationEngine` fallback | Real Core ML inference |
 
-All three compete for the same Metal command queue (no parallel GPU streams).
-With all 3 active, iPhone Air drops to 16-18 FPS.
-The Neural Engine (ANE) sits idle — moving face to ANE frees GPU for pose + hands.
+---
 
-**Benefit:** Face on ANE + Pose/Hand on GPU = true parallelism. No Metal queue contention.
+## 1. Whisper Export (Priority 1)
 
-## Why Face First
+### Model Selection
 
-- Face has 478 landmarks (heaviest model) — biggest GPU pressure
-- Face is already frame-skipped (`_faceSkipInterval`) due to perf — not ideal
-- Thermal shedding sheds face first (`.serious` thermal state)
-- Moving face to ANE would let it run every frame without frame-skipping
+| Variant | Parameters | Size (FP16) | Quality | Speed (A17) |
+|---------|-----------|-------------|---------|-------------|
+| **whisper-tiny** | 39M | ~75 MB | Good for short recordings | ~1x real-time |
+| **whisper-base** | 74M | ~140 MB | Better accuracy | ~0.5x real-time |
+| whisper-small | 244M | ~460 MB | High quality | Slow on-device |
 
-## Strategy: PyTorch → CoreML (NOT TFLite)
+**Recommendation**: Start with `whisper-tiny`, benchmark, then try `whisper-base` if quality insufficient.
 
-The TFLite→CoreML route from MediaPipe .task files has high risk of incompatible ops.
-The clean route is a **PyTorch-native FaceMesh model** exported with `coremltools.convert()` —
-same proven pipeline as YOLO26s and Depth Anything V2 exports in this repo.
+### Architecture
 
-### Candidate Models
+Whisper has 3 components:
+1. **Audio preprocessor** — mel spectrogram (80 bins, 16kHz, 30s window)
+2. **Encoder** — audio features → latent representation
+3. **Decoder** — autoregressive token generation
 
-| Model | Landmarks | Size | PyTorch Native | Export Risk |
-|-------|-----------|------|----------------|-------------|
-| **MediaPipePyTorch (zmurez)** | 468 | ~3MB | Yes (reimpl.) | Low — same architecture as FaceMesh |
-| **facemesh.pytorch (thepowerfuldeez)** | 468 | ~3MB | Yes (reimpl.) | Low |
-| face-alignment (Adrian Bulat) | 68 | ~2MB | Yes | Clean — but only 68 landmarks |
-| InsightFace 2D106 | 106 | ~5MB | Yes | Clean — well-tested pipeline |
+### Export Strategy
 
-**Recommendation:** `zmurez/MediaPipePyTorch` or `thepowerfuldeez/facemesh.pytorch` — 468 landmarks matching MediaPipe FaceLandmarker indices → **drop-in replacement**. `FacePose` struct unchanged, fusion lines (chin index 152) intact, no re-mapping needed.
+Two approaches:
 
-### Conversion Pipeline
-
-```
-PyTorch FaceMesh model (.pth)
-    ↓ torch.jit.trace(model, dummy_input)
-TorchScript (.pt)
-    ↓ coremltools.convert(traced, ...)
-CoreML .mlpackage (FP16, compute_units=CPU_AND_NE)
-```
-
-### Export Code (template — adapt from export_depth.py)
-
+**A) Export encoder + decoder separately (recommended)**
 ```python
-import torch
-import coremltools as ct
+# Encoder: audio mel → features
+encoder_model = whisper.model.encoder
+traced_encoder = torch.jit.trace(encoder_model, mel_input)
+ct.convert(traced_encoder, ...)  → WhisperEncoder.mlpackage
 
-model = load_face_model()  # from zmurez/MediaPipePyTorch
-model.eval()
-dummy = torch.randn(1, 3, 192, 192)
-traced = torch.jit.trace(model, dummy)
-
-mlmodel = ct.convert(
-    traced,
-    inputs=[ct.ImageType(shape=(1, 3, 192, 192))],
-    minimum_deployment_target=ct.target.iOS18,
-    compute_precision=ct.precision.FLOAT16,
-    compute_units=ct.ComputeUnit.CPU_AND_NE,
-)
-mlmodel.save("exports/FaceLandmarks.mlpackage")
+# Decoder: features + tokens → next token
+decoder_model = whisper.model.decoder
+traced_decoder = torch.jit.trace(decoder_model, (features, tokens))
+ct.convert(traced_decoder, ...)  → WhisperDecoder.mlpackage
 ```
 
-### Key Considerations
+**B) Use `whisper-coreml` community export (faster path)**
+- Check `huggingface.co/coreml-community/whisper-tiny` for pre-converted models
+- Validate output format matches our `TranscriptSegment(start, end, text)`
 
-1. **Verify landmark indices**: Ensure output indices match MediaPipe's 468-point face mesh (chin=152, forehead, etc.)
-2. **Input preprocessing**: Check if model expects RGB normalized [0,1] or [-1,1] — must match CoreML pipeline
-3. **Output format**: Map output tensor to `[468 × (x, y, z)]` — FlowCoach adds visibility=1.0 for all face landmarks
-4. **ANE compatibility**: Avoid dynamic shapes. Use `ct.ComputeUnit.CPU_AND_NE` — coremltools will warn if ops fall back to CPU
-5. **INT8 option**: ANE INT8 is 2x faster than FP16 (proven with DepthAnything export). Consider `ct.optimize.coreml.linear_quantize_weights()` if FP16 insufficient
-
-## Script to Create
+### Script to Create
 
 ```
-scripts/export_face_landmarks.py
+scripts/export_whisper.py
 ```
 
 ### Interface
 
 ```bash
-uv run python scripts/export_face_landmarks.py                        # Default: FP16, ANE
-uv run python scripts/export_face_landmarks.py --int8                  # INT8 quantization
-uv run python scripts/export_face_landmarks.py --variant thepowerfuldeez  # Alt model source
+uv run python scripts/export_whisper.py                          # Default: tiny, FP16
+uv run python scripts/export_whisper.py --variant base           # Base model
+uv run python scripts/export_whisper.py --no-half                # FP32
 ```
 
 ### Output
 
 ```
-exports/FaceLandmarks.mlpackage
+exports/WhisperEncoder.mlpackage
+exports/WhisperDecoder.mlpackage
 ```
 
-## Integration Back in FlowCoach
+### Key Considerations
 
-Once exported, the iOS integration path:
+1. **Mel spectrogram** — can be computed in Swift with `Accelerate.framework` (FFT + mel filterbank) or exported as a third Core ML model
+2. **Tokenizer** — need the Whisper tokenizer (BPE). Options: port to Swift, or bundle tokenizer vocab + decode in Swift
+3. **Language detection** — Whisper auto-detects language. Keep this behavior for multi-language support
+4. **30-second chunks** — Whisper processes 30s windows. For longer recordings, chunk audio and concatenate segments
+5. **Timestamps** — Whisper can output word-level timestamps, map these to `TranscriptSegment.start/end`
 
-1. Add `FaceLandmarks.mlpackage` to Xcode bundle resources
-2. Create `CoreMLFaceEstimator` conforming to `FrameConsumer`
-3. Use Vision framework `VNCoreMLRequest` for inference on ANE (parallel to GPU-bound MediaPipe)
-4. Output → `FacePose(landmarks: [Landmark])` directly (same 468 indices, no re-mapping)
-5. Replace MediaPipe `FaceLandmarker` usage in `HolisticEstimator`
+---
 
-## Files in FlowCoach to Reference
+## 2. Summarizer Export (Priority 2)
 
-- `FlowCoach/Utils/Constants.swift` — model filenames, confidence thresholds
-- `FlowCoach/Services/Vision/HolisticEstimator.swift` — current face pipeline (lines 272-300)
-- `FlowCoach/Models/Pose/FacePose.swift` — output format (478→468 landmarks)
-- `FlowCoach/Models/Pose/Landmark.swift` — `Landmark(x, y, z, visibility)`
-- `docs/project/RESEARCH.md` — full research on candidate models (line 221+)
+### Model Selection
+
+| Model | Parameters | Size (FP16) | Quality | Speed |
+|-------|-----------|-------------|---------|-------|
+| **Phi-3.5-mini-instruct** | 3.8B | ~7 GB | Excellent | Slow on-device |
+| **Qwen2.5-0.5B-Instruct** | 0.5B | ~1 GB | Good | Reasonable |
+| **SmolLM2-360M-Instruct** | 360M | ~700 MB | Decent | Fast |
+| **TinyLlama-1.1B** | 1.1B | ~2 GB | Good | Moderate |
+
+**Recommendation**: Start with `SmolLM2-360M-Instruct` or `Qwen2.5-0.5B-Instruct`. Small enough for on-device, capable enough for structured JSON output (summary + highlights + actions).
+
+### Export Strategy
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import coremltools as ct
+
+model = AutoModelForCausalLM.from_pretrained("HuggingFaceTB/SmolLM2-360M-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/SmolLM2-360M-Instruct")
+
+# Trace and convert
+traced = torch.jit.trace(model, dummy_input)
+mlmodel = ct.convert(traced, minimum_deployment_target=ct.target.iOS18, ...)
+mlmodel.save("exports/SmolLM2.mlpackage")
+```
+
+### Script to Create
+
+```
+scripts/export_summarizer.py
+```
+
+### Interface
+
+```bash
+uv run python scripts/export_summarizer.py                              # Default: SmolLM2-360M
+uv run python scripts/export_summarizer.py --variant qwen2.5-0.5b      # Qwen variant
+uv run python scripts/export_summarizer.py --no-half                    # FP32
+```
+
+### Output
+
+```
+exports/SmolLM2.mlpackage    # or Qwen2.mlpackage
+```
+
+### Key Considerations
+
+1. **Tokenizer** — bundle tokenizer vocab JSON in iOS app, decode in Swift
+2. **Prompt format** — match the existing prompt in `SummarizationEngine.swift` (JSON output: summary, highlights, actionItems)
+3. **Context window** — 360M models handle ~2K tokens well. Truncate long transcripts to fit
+4. **Quantization** — INT8 or INT4 via `coremltools.optimize` to reduce model size and improve ANE speed
+5. **On-demand download** — if model is >100MB, consider Apple's on-demand resources or background asset download
+
+---
+
+## Integration in Brevox
+
+### Whisper
+1. Add `WhisperEncoder.mlpackage` + `WhisperDecoder.mlpackage` to Xcode bundle
+2. Implement mel spectrogram in `CoreMLWhisperTranscriber` using `Accelerate`
+3. Run encoder → decoder loop with greedy/beam search
+4. Map tokens → text segments with timestamps
+5. Remove `DebugTranscriptionEngine` fallback (keep as test-only)
+
+### Summarizer
+1. Add `SmolLM2.mlpackage` to Xcode bundle (or on-demand resource)
+2. Create `CoreMLSummarizationEngine: SummarizationEngine`
+3. Tokenize input, run inference, decode JSON output
+4. Keep `HeuristicSummarizationEngine` as fallback if model unavailable
+
+### Files to Modify in Brevox
+- `Brevox/Services/Processing/CoreMLWhisperTranscriber.swift` — real pipeline
+- `Brevox/Services/Processing/SummarizationEngine.swift` — new Core ML engine
+- `project.yml` — add model resources to bundle
+- `CLAUDE.md` — update model references
+
+---
 
 ## Success Criteria
 
-- [x] PyTorch FaceMesh model loads and traces cleanly *(2026-02-28: zmurez/MediaPipePyTorch, TraceableFaceLandmark wrapper)*
-- [x] CoreML export succeeds with FP16 and `CPU_AND_NE` *(2026-02-28: 1.2 MB, 365 MIL ops)*
-- [ ] Output landmarks match MediaPipe 468-point indices (spot-check chin=152, nose tip, eye corners)
-- [ ] Model runs on ANE (verify with Instruments → CoreML trace)
-- [ ] FP16 inference < 15ms on iPhone 12+ (vs ~20ms current GPU)
-- [ ] INT8 variant if FP16 insufficient
+- [ ] Whisper tiny exported to Core ML (encoder + decoder)
+- [ ] Whisper transcribes a 30s audio clip correctly on device
+- [ ] Whisper auto-detects language (Spanish + English minimum)
+- [ ] Summarizer exported to Core ML
+- [ ] Summarizer produces valid JSON (summary, highlights, actionItems) from transcript
+- [ ] Both models run on iPhone 15 Pro simulator
+- [ ] Total model bundle < 500 MB (or split with on-demand resources)
 
-## Later: Hand + Pose
+---
 
-Same PyTorch→CoreML pipeline. Priority:
-1. **Face** (this session) — biggest win, heaviest model
-2. **Hand** — medium win, frees GPU further
-3. **Pose** — lowest priority (already fast on GPU as sole model)
+## Previous Tasks (Completed)
+
+### Face Landmarks (flow-coach-ios)
+- [x] PyTorch FaceMesh model loads and traces cleanly
+- [x] CoreML export succeeds with FP16 and CPU_AND_NE (1.2 MB)
+- [ ] Output landmarks match MediaPipe 468-point indices
+- [ ] Model runs on ANE (verify with Instruments)
+
+### Later: Hand + Pose (flow-coach-ios)
+Same PyTorch→CoreML pipeline. Lower priority than Brevox models.
