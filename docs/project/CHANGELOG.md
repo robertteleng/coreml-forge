@@ -4,6 +4,29 @@ Registro cronologico de desarrollo, decisiones tecnicas, y cambios significativo
 
 ---
 
+## 2026-03-15 — Whisper large-v3-turbo Export
+
+### Creado
+
+- `scripts/export_whisper_turbo.py` — Export whisper-large-v3-turbo via HF `transformers` (no `openai-whisper`). Encoder a CoreML + decoder weights como safetensors.
+
+### Modificado
+
+- `pyproject.toml` — Agregado `transformers>=4.44` + entry point `forge-whisper-turbo`
+- `CLAUDE.md` — Agregado Whisper large-v3-turbo a tabla de modelos, commands, estructura
+- `docs/project/IMPLEMENTATION_PLAN.md` — Actualizado progreso Whisper, modelo actual es large-v3-turbo
+- `docs/project/NEXT_SESSION.md` — Marcado task 1 completado, agregado task de integración en Brevox
+
+### Decisiones técnicas
+
+- **HF transformers sobre openai-whisper**: `large-v3-turbo` solo está disponible en HuggingFace, no en el paquete `openai-whisper` que solo soporta tiny/base/small/medium.
+- **128 mel bins**: large-v3-turbo usa 128 (vs 80 en small). Brevox necesita actualizar su computación de mel.
+- **EncoderWrapper**: El encoder de HF espera `input_features` como kwarg; el wrapper convierte a positional arg para que `torch.jit.trace` funcione.
+- **proj_out incluido**: Los pesos del decoder incluyen `lm_head` (proyección a vocabulario) que en el modelo HF se llama `proj_out`.
+- **Tamaños**: Encoder 1215 MB, decoder 455 MB — significativamente más grande que small pero con 4 decoder layers el inference es rápido.
+
+---
+
 ## 2026-02-15 — Setup Inicial + Primeros Exports
 
 ### Creado

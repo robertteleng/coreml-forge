@@ -1,16 +1,22 @@
 # NEXT SESSION
 
-**Updated:** 2026-03-15 00:20 UTC
+**Updated:** 2026-03-15
+
+## Completed
+
+### ~~1. Export Whisper large-v3-turbo to CoreML~~ ✓
+- Exported via `scripts/export_whisper_turbo.py` (uses HF `transformers`)
+- Encoder: 1215 MB `.mlpackage` (32 layers, FP16, ANE)
+- Decoder: 455 MB safetensors (4 layers + lm_head, 101 tensors)
+- **Importante para Brevox**: mel spectrogram ahora usa **128 bins** (no 80)
+  - Actualizar `n_mels=128` en la computación de mel en Swift
 
 ## Pending Tasks
 
-### 1. Export Whisper large-v3-turbo to CoreML
-- Model: `openai/whisper-large-v3-turbo`
-- Currently using Whisper small in Brevox — upgrade to large-v3-turbo for better accuracy
-- large-v3-turbo has only 4 decoder layers (vs 32 in large-v3), so it's fast despite being "large"
-- Export encoder as `.mlpackage` for ANE, decoder weights as `.safetensors`
-- Same pipeline as Whisper small export — just different model
-- Target: replace `Brevox/Resources/Models/Whisper_small/` with `Whisper_large_v3_turbo/`
+### 1. Copy Whisper large-v3-turbo to Brevox
+- Copy `exports/Whisper_large_v3_turbo/` to brevox-ios bundle
+- Update mel computation: `n_mels=128` (was 80)
+- Update decoder Swift code for new dimensions: `d_model=1280`, `n_text_layer=4`
 
 ### 2. Summarizer Qwen3.5-4B Export (in progress)
 - ANEMLL export running on Mac (16GB) with workaround:

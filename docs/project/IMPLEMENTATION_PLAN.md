@@ -59,7 +59,10 @@ Modelos ML exportados a CoreML para apps iOS. Organizado por consumer.
 
 ### Fase 1: Whisper Transcription (en progreso)
 
-**Modelo**: whisper-small (244M params, ~460 MB FP16)
+**Modelo actual**: whisper-large-v3-turbo (809M params, ~1.7 GB FP16)
+**Modelo anterior**: whisper-small (244M params, ~460 MB FP16)
+
+**Por qué large-v3-turbo**: Mismo encoder que large-v3 (32 layers) pero solo 4 decoder layers (vs 32). Precisión near-large a costo near-medium. 128 mel bins (vs 80 en small).
 
 **Arquitectura de export**: Solo encoder a CoreML, decoder en Swift
 - El decoder de Whisper no se puede trazar limpiamente (`torch.jit.trace` fija las positional embeddings)
@@ -68,19 +71,20 @@ Modelos ML exportados a CoreML para apps iOS. Organizado por consumer.
 
 **Entregables**:
 ```
-exports/Whisper_{variant}/
-├── WhisperEncoder_{variant}.mlpackage   # CoreML encoder (ANE)
-├── decoder_weights.safetensors          # Pesos del decoder para Swift
-├── tokenizer.json                       # Vocabulario BPE
-└── config.json                          # Dimensiones del modelo
+exports/Whisper_large_v3_turbo/
+├── WhisperEncoder_large_v3_turbo.mlpackage  # CoreML encoder (ANE) ~1215 MB
+├── decoder_weights.safetensors              # Decoder + lm_head ~455 MB
+├── tokenizer.json                           # HF tokenizer
+└── config.json                              # Dimensiones del modelo
 ```
 
 **Progreso**:
-- [x] Script `export_whisper.py` con encoder CoreML + decoder weights + tokenizer + config
-- [x] Testeado con whisper-tiny (15.7 MB encoder, 56.4 MB decoder weights)
-- [x] Exportar whisper-small (variante de producción, 168 MB encoder + 293 MB decoder)
+- [x] Script `export_whisper.py` — whisper-small (168 MB encoder + 293 MB decoder)
+- [x] Script `export_whisper_turbo.py` — whisper-large-v3-turbo via HF transformers
+- [x] Exportar large-v3-turbo (1215 MB encoder + 455 MB decoder, 101 tensors)
+- [ ] Copiar a Brevox + actualizar mel computation (n_mels=128)
 - [ ] Verificar encoder output en Xcode
-- [ ] Implementar decoder en Swift (brevox-ios)
+- [ ] Implementar decoder en Swift (brevox-ios) — dimensiones: d_model=1280, n_text_layer=4
 
 ### Fase 2: Summarizer (en progreso)
 
@@ -113,8 +117,8 @@ exports/Summarizer_Qwen3.5_4B/
 ### Integración en Brevox
 
 **Whisper**:
-1. Copiar `Whisper_{variant}/` a Xcode bundle
-2. Mel spectrogram en Swift (Accelerate: 80 mel bins, 16kHz, hop=160, FFT=400)
+1. Copiar `Whisper_large_v3_turbo/` a Xcode bundle
+2. Mel spectrogram en Swift (Accelerate: **128 mel bins**, 16kHz, hop=160, FFT=400)
 3. Encoder CoreML → decoder Swift (greedy/beam search)
 4. Mapear tokens → `TranscriptSegment(start, end, text)`
 
